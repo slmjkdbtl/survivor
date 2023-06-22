@@ -1,0 +1,19 @@
+{
+	"name": "survivor",
+	"scripts": {
+		"build": "esbuild --bundle src/main.ts --outfile=www/main.js --minify",
+		"dev": "esbuild --bundle src/main.ts --outfile=www/main.js --servedir=www",
+		"bundle": "npm run build && mkdir -p dist && zip -r dist/game.zip www -x \"**/.DS_Store\"",
+		"check": "tsc",
+		"dev:desktop": "tauri dev",
+		"build:desktop": "tauri build"
+	},
+	"dependencies": {
+		"kaboom": "file:../kaboom"
+	},
+	"devDependencies": {
+		"@tauri-apps/cli": "^1.4.0",
+		"esbuild": "^0.18.6",
+		"typescript": "^5.1.3"
+	}
+}
