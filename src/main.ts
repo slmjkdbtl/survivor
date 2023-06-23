@@ -26,8 +26,6 @@ const TILE_WIDTH = 64
 const TILE_HEIGHT = 64
 const MAX_HP = 100
 const HEALTHBAR_WIDTH = 160
-const HEALTHBAR_POS = k.vec2(24, 24)
-const TOOLBAR_POS = k.vec2(24, k.height() - 24)
 const SWORD_SPEED = 80
 const MAX_SWORDS = 3
 const BULLET_SPEED = 800
@@ -37,6 +35,8 @@ const BAG_SPEED = 60
 const SWORD_DMG = 100
 const GUN_DMG = 100
 const DIZZY_SPEED = 1000
+const MAX_EXP_INIT = 10
+const MAX_EXP_STEP = 5
 
 k.setBackground(0, 0, 0)
 k.loadSprite("bean", "sprites/bean.png")
@@ -81,8 +81,16 @@ for (let i = 0; i < WIDTH / TILE_WIDTH; i++) {
 	}
 }
 
-k.onKeyPress("p", () => {
-	game.paused = !game.paused
+k.onKeyPress("escape", () => {
+	if (game.paused) {
+		game.paused = false
+		menu.paused = true
+		menu.hidden = true
+	} else {
+		game.paused = true
+		menu.paused = false
+		menu.hidden = false
+	}
 })
 
 const bean = game.add([
@@ -95,42 +103,37 @@ const bean = game.add([
 	highlight(),
 ])
 
-function updateHealthbar() {
-	healthbar.width = HEALTHBAR_WIDTH * bean.hp() / MAX_HP
-}
-
 bean.onHurt((dmg) => {
-	updateHealthbar()
 	const i = 10
 	k.shake(5)
 })
 
 bean.onHeal((dmg) => {
 	if (bean.hp() > MAX_HP) bean.setHP(MAX_HP)
-	updateHealthbar()
 	healthbarbg.highlight()
 	bean.highlight()
 })
 
 const swords = bean.add([
 	k.rotate(0),
+	{ speed: SWORD_SPEED },
 ])
 
 const guns = bean.add([])
 const trumpets = bean.add([])
 
 swords.onUpdate(() => {
-	swords.angle += k.dt() * SWORD_SPEED
+	swords.angle += k.dt() * swords.speed
 })
 
 const levels = {
 	sword: 1,
-	gun: 1,
-	trumpet: 1,
+	gun: 0,
+	trumpet: 0,
 }
 
 const toolbar = ui.add([
-	k.pos(TOOLBAR_POS),
+	k.pos(k.vec2(24, k.height() - 24)),
 	k.scale(),
 	k.sprite("toolbar"),
 	k.fixed(),
@@ -140,20 +143,21 @@ const toolbar = ui.add([
 
 function updateToolbar() {
 	toolbar.removeAll()
-	let x = 48
+	let x = 36
 	for (const tool in levels) {
 		const level = levels[tool]
 		if (level <= 0) continue
 		toolbar.add([
 			k.sprite(tool),
-			k.pos(x, -56),
+			k.pos(x, -38),
 			k.fixed(),
 			k.anchor("center"),
+			k.scale(0.8),
 		])
 		const dot = toolbar.add([
 			k.circle(12),
 			k.fixed(),
-			k.pos(x + 22, -40),
+			k.pos(x + 22, -24),
 			k.anchor("center"),
 			k.color(colors.black),
 		])
@@ -162,7 +166,7 @@ function updateToolbar() {
 			k.fixed(),
 			k.anchor("center"),
 		])
-		x += 70
+		x += 64
 	}
 }
 
@@ -186,6 +190,9 @@ function initSwords() {
 		sword.onCollide("enemy", (e) => {
 			e.hurt(SWORD_DMG)
 		})
+	}
+	if (levels.sword >= 4) {
+		swords.speed = SWORD_SPEED * (levels.sword - 2)
 	}
 	updateToolbar()
 }
@@ -378,7 +385,7 @@ function enemy(opts: {
 				if (exp >= maxExp) {
 					exp = 0
 					presentUpgrades()
-					maxExp += maxExpStep
+					maxExp += MAX_EXP_STEP
 				}
 				if (k.chance(0.2)) {
 					addHeart(this.pos)
@@ -535,7 +542,6 @@ game.loop(0.5, () => {
 
 bean.onCollide("heart", (h) => {
 	bean.heal(10)
-	updateHealthbar()
 	h.destroy()
 })
 
@@ -552,7 +558,7 @@ function addHeart(pos: Vec2) {
 }
 
 const healthbarbg = ui.add([
-	k.pos(HEALTHBAR_POS),
+	k.pos(k.vec2(24, 44)),
 	k.scale(),
 	k.rect(HEALTHBAR_WIDTH, 16, { radius: 8 }),
 	k.fixed(),
@@ -567,14 +573,22 @@ const healthbar = healthbarbg.add([
 ])
 
 healthbar.add([
+	k.pos(0, -22),
 	k.sprite("healthbar"),
 	k.fixed(),
 ])
 
+healthbar.onUpdate(() => {
+	healthbar.width = k.lerp(
+		healthbar.width,
+		HEALTHBAR_WIDTH * bean.hp() / MAX_HP,
+		k.dt() * 12,
+	)
+})
+
 let score = 0
 let exp = 0
-let maxExp = 10
-let maxExpStep = 5
+let maxExp = MAX_EXP_INIT
 
 function setScore(s: number | ((prev: number) => number)) {
 	score = typeof s === "number" ? s : s(score)
@@ -608,16 +622,15 @@ lose.paused = true
 
 function reset() {
 	bean.setHP(MAX_HP)
-	updateHealthbar()
 	levels.sword = 1
 	levels.gun = 0
+	levels.trumpet = 0
 	initSwords()
 	initTrumpet()
 	initGuns()
 	setScore(0)
 	exp = 0
-	maxExp = 10
-	maxExpStep = 15
+	maxExp = MAX_EXP_INIT
 }
 
 k.onKeyPress("space", () => {
@@ -656,6 +669,29 @@ lose.add([
 	k.anchor("center"),
 	k.pos(k.width() / 2, k.height() / 2),
 	k.fixed(),
+])
+
+const menu = k.add([
+	k.fixed(),
+	k.z(100),
+])
+
+menu.hidden = true
+menu.paused = true
+menu.add(makeFilter())
+
+menu.add([
+	k.rect(12, 48, { radius: 4 }),
+	k.fixed(),
+	k.pos(k.width() / 2 - 12, k.height() / 2),
+	k.anchor("center"),
+])
+
+menu.add([
+	k.rect(12, 48, { radius: 4 }),
+	k.fixed(),
+	k.pos(k.width() / 2 + 12, k.height() / 2),
+	k.anchor("center"),
 ])
 
 function presentUpgrades() {
