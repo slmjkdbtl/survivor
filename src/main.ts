@@ -25,8 +25,8 @@ const HEIGHT = 1600
 const TILE_WIDTH = 64
 const TILE_HEIGHT = 64
 const MAX_HP = 100
-const HPBAR_WIDTH = 160
-const EXPBAR_WIDTH = 240
+const HPBAR_WIDTH = 200
+const EXPBAR_WIDTH = 200
 const SWORD_SPEED = 80
 const MAX_SWORDS = 3
 const BULLET_SPEED = 800
@@ -132,8 +132,8 @@ swords.onUpdate(() => {
 
 const levels = {
 	sword: 1,
-	gun: 0,
-	trumpet: 0,
+	gun: 1,
+	trumpet: 1,
 }
 
 const toolbar = ui.add([
@@ -263,8 +263,17 @@ function initTrumpet() {
 			k.circle(0),
 			k.timer(),
 			k.opacity(0.3),
+			k.color(),
 			k.z(-100),
 		])
+		effect.onUpdate(() => {
+			const c1 = colors.lightblue
+			const c2 = colors.green
+			const s = 16
+			effect.color.r = k.wave(c1[0], c2[0], k.time() * s)
+			effect.color.g = k.wave(c1[1], c2[1], k.time() * s)
+			effect.color.b = k.wave(c1[2], c2[2], k.time() * s)
+		})
 		effect.tween(0, 300, 1, (r) => effect.radius = r)
 		effect.tween(1, 0, 1, (o) => effect.opacity = o)
 		effect.wait(1, () => effect.destroy())
@@ -538,8 +547,8 @@ function spawnDino() {
 
 game.loop(0.5, () => {
 	k.choose([
-		// spawnBag,
-		// spawnBtfly,
+		spawnBag,
+		spawnBtfly,
 		spawnDino,
 	])()
 })
