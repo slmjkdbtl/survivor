@@ -25,7 +25,8 @@ const HEIGHT = 1600
 const TILE_WIDTH = 64
 const TILE_HEIGHT = 64
 const MAX_HP = 100
-const HEALTHBAR_WIDTH = 160
+const HPBAR_WIDTH = 160
+const EXPBAR_WIDTH = 240
 const SWORD_SPEED = 80
 const MAX_SWORDS = 3
 const BULLET_SPEED = 800
@@ -43,7 +44,8 @@ k.loadSprite("bean", "sprites/bean.png")
 k.loadSprite("bag", "sprites/bag.png")
 k.loadSprite("dino", "sprites/dino.png")
 k.loadSprite("btfly", "sprites/btfly.png")
-k.loadSprite("healthbar", "sprites/healthbar.png")
+k.loadSprite("hpbar", "sprites/hpbar.png")
+k.loadSprite("expbar", "sprites/expbar.png")
 k.loadSprite("toolbar", "sprites/toolbar.png")
 k.loadSprite("sword", "sprites/sword.png")
 k.loadSprite("gun", "sprites/gun.png")
@@ -60,6 +62,8 @@ const colors: Record<string, [number, number, number]> = {
 	green: [91, 166, 117],
 	orange: [255, 184, 121],
 	black: [31, 16, 42],
+	blue: [109, 128, 250],
+	lightblue: [141, 183, 255],
 }
 
 const game = k.add([
@@ -110,7 +114,7 @@ bean.onHurt((dmg) => {
 
 bean.onHeal((dmg) => {
 	if (bean.hp() > MAX_HP) bean.setHP(MAX_HP)
-	healthbarbg.highlight()
+	hpbar.highlight()
 	bean.highlight()
 })
 
@@ -208,7 +212,7 @@ function initGuns() {
 	])
 	gun.loop(1, () => {
 		game.add([
-			k.rect(16, 6, { radius: 2 }),
+			k.rect(24, 8, { radius: 2 }),
 			k.outline(4, k.Color.fromArray(colors.black)),
 			k.pos(gun.worldPos().add(16, -8)),
 			k.move(k.RIGHT, BULLET_SPEED),
@@ -225,7 +229,7 @@ function initGuns() {
 		])
 		gun.loop(1, () => {
 			game.add([
-				k.rect(16, 6, { radius: 2 }),
+				k.rect(24, 8, { radius: 2 }),
 				k.outline(4, k.Color.fromArray(colors.black)),
 				k.pos(gun.worldPos().add(-16, -8)),
 				k.move(k.LEFT, BULLET_SPEED),
@@ -497,9 +501,9 @@ function spawnDino() {
 	})
 	dino.onStateEnter("attack", async () => {
 		game.add([
-			k.rect(16, 6, { radius: 2 }),
+			k.rect(24, 8, { radius: 2 }),
 			k.outline(4, k.Color.fromArray(colors.black)),
-			k.pos(dino.worldPos().add(16, -8)),
+			k.pos(dino.worldPos().add(dino.flipX ? -20 : 20, 4)),
 			k.move(dino.flipX ? k.LEFT : k.RIGHT, BULLET_SPEED),
 			k.area(),
 			"enemybullet",
@@ -534,8 +538,8 @@ function spawnDino() {
 
 game.loop(0.5, () => {
 	k.choose([
-		spawnBag,
-		spawnBtfly,
+		// spawnBag,
+		// spawnBtfly,
 		spawnDino,
 	])()
 })
@@ -557,34 +561,43 @@ function addHeart(pos: Vec2) {
 	])
 }
 
-const healthbarbg = ui.add([
-	k.pos(k.vec2(24, 44)),
-	k.scale(),
-	k.rect(HEALTHBAR_WIDTH, 16, { radius: 8 }),
-	k.fixed(),
-	k.color(colors.black),
-	highlight({ scale: 1.1 }),
-])
+function addBar(pos, width, color, sprite, getPerc) {
 
-const healthbar = healthbarbg.add([
-	k.rect(HEALTHBAR_WIDTH, 16, { radius: 8 }),
-	k.fixed(),
-	k.color(colors.green),
-])
+	const bg = ui.add([
+		k.pos(pos),
+		k.scale(),
+		k.rect(width, 16, { radius: 8 }),
+		k.fixed(),
+		k.color(colors.black),
+		highlight({ scale: 1.1 }),
+	])
 
-healthbar.add([
-	k.pos(0, -22),
-	k.sprite("healthbar"),
-	k.fixed(),
-])
+	const bar = bg.add([
+		k.rect(0, 16, { radius: 8 }),
+		k.fixed(),
+		k.color(color),
+	])
 
-healthbar.onUpdate(() => {
-	healthbar.width = k.lerp(
-		healthbar.width,
-		HEALTHBAR_WIDTH * bean.hp() / MAX_HP,
-		k.dt() * 12,
-	)
-})
+	bar.add([
+		k.pos(0, -22),
+		k.sprite(sprite),
+		k.fixed(),
+	])
+
+	bar.onUpdate(() => {
+		bar.width = k.lerp(
+			bar.width,
+			width * getPerc(),
+			k.dt() * 12,
+		)
+	})
+
+	return bg
+
+}
+
+const hpbar = addBar(k.vec2(24, 44), HPBAR_WIDTH, colors.green, "hpbar", () => bean.hp() / MAX_HP)
+const expbar = addBar(k.vec2(24, 90), EXPBAR_WIDTH, colors.lightblue, "expbar", () => exp / maxExp)
 
 let score = 0
 let exp = 0
