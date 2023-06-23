@@ -30,6 +30,7 @@ const EXPBAR_WIDTH = 200
 const SWORD_SPEED = 80
 const MAX_SWORDS = 3
 const BULLET_SPEED = 800
+const DINO_BULLET_SPEED = 400
 const BTFLY_SPEED = 300
 const DINO_SPEED = 80
 const BAG_SPEED = 60
@@ -57,13 +58,13 @@ k.loadBitmapFont("happy", "sprites/happy_28x36.png", 28, 36, {
 	outline: 4,
 })
 
-const colors: Record<string, [number, number, number]> = {
-	red: [204, 66, 94],
-	green: [91, 166, 117],
-	orange: [255, 184, 121],
-	black: [31, 16, 42],
-	blue: [109, 128, 250],
-	lightblue: [141, 183, 255],
+const colors = {
+	red: k.rgb(204, 66, 94),
+	green: k.rgb(91, 166, 117),
+	orange: k.rgb(255, 184, 121),
+	black: k.rgb(31, 16, 42),
+	blue: k.rgb(109, 128, 250),
+	lightblue: k.rgb(141, 183, 255),
 }
 
 const game = k.add([
@@ -213,7 +214,7 @@ function initGuns() {
 	gun.loop(1, () => {
 		game.add([
 			k.rect(24, 8, { radius: 2 }),
-			k.outline(4, k.Color.fromArray(colors.black)),
+			k.outline(4, colors.black),
 			k.pos(gun.worldPos().add(16, -8)),
 			k.move(k.RIGHT, BULLET_SPEED),
 			k.area(),
@@ -230,7 +231,7 @@ function initGuns() {
 		gun.loop(1, () => {
 			game.add([
 				k.rect(24, 8, { radius: 2 }),
-				k.outline(4, k.Color.fromArray(colors.black)),
+				k.outline(4, colors.black),
 				k.pos(gun.worldPos().add(-16, -8)),
 				k.move(k.LEFT, BULLET_SPEED),
 				k.area(),
@@ -270,9 +271,9 @@ function initTrumpet() {
 			const c1 = colors.lightblue
 			const c2 = colors.green
 			const s = 16
-			effect.color.r = k.wave(c1[0], c2[0], k.time() * s)
-			effect.color.g = k.wave(c1[1], c2[1], k.time() * s)
-			effect.color.b = k.wave(c1[2], c2[2], k.time() * s)
+			effect.color.r = k.wave(c1.r, c2.r, k.time() * s)
+			effect.color.g = k.wave(c1.g, c2.g, k.time() * s)
+			effect.color.b = k.wave(c1.b, c2.b, k.time() * s)
 		})
 		effect.tween(0, 300, 1, (r) => effect.radius = r)
 		effect.tween(1, 0, 1, (o) => effect.opacity = o)
@@ -440,6 +441,21 @@ function spawnBag() {
 	bag.onStateEnd("dizzy", async () => {
 		bag.angle = 0
 	})
+	// bag.add([
+		// k.rect(40, 8, { radius: 4 }),
+		// k.color(colors.black),
+		// k.pos(-20, -40),
+	// ])
+	// bag.add([
+		// k.rect(40, 8, { radius: 4 }),
+		// k.color(colors.green),
+		// k.pos(-20, -40),
+	// ])
+	// bag.add([
+		// k.rect(40, 8, { radius: 4 }),
+		// k.outline(4, colors.black),
+		// k.pos(-20, -40),
+	// ])
 	return bag
 }
 
@@ -511,9 +527,9 @@ function spawnDino() {
 	dino.onStateEnter("attack", async () => {
 		game.add([
 			k.rect(24, 8, { radius: 2 }),
-			k.outline(4, k.Color.fromArray(colors.black)),
-			k.pos(dino.worldPos().add(dino.flipX ? -20 : 20, 4)),
-			k.move(dino.flipX ? k.LEFT : k.RIGHT, BULLET_SPEED),
+			k.outline(4, colors.black),
+			k.pos(dino.worldPos().add(dino.flipX ? -24 : 24, 4)),
+			k.move(dino.flipX ? k.LEFT : k.RIGHT, DINO_BULLET_SPEED),
 			k.area(),
 			"enemybullet",
 			{ dmg: 20 },
@@ -545,7 +561,7 @@ function spawnDino() {
 	return dino
 }
 
-game.loop(0.5, () => {
+game.loop(1, () => {
 	k.choose([
 		spawnBag,
 		spawnBtfly,
