@@ -96,7 +96,7 @@ for (const snd of sounds) {
 
 const music = k.play("katamari", {
 	loop: true,
-	paused: true,
+	// paused: true,
 })
 
 const colors = {
