@@ -40,6 +40,8 @@ const GUN_DMG = 100
 const DIZZY_SPEED = 1000
 const MAX_EXP_INIT = 10
 const MAX_EXP_STEP = 5
+const BOSS_MARK = 3000
+const BOSS_MARK_STEP = 3000
 
 k.volume(0.5)
 k.setBackground(0, 0, 0)
@@ -266,13 +268,14 @@ function initSwords() {
 function initGuns() {
 	guns.removeAll()
 	if (levels.gun <= 0) return
+	const rate = levels.gun >= 3 ? 1 / (levels.gun - 1) : 1
 	const gun = guns.add([
 		k.pos(60, 0),
 		k.sprite("gun"),
 		k.anchor("center"),
 		k.timer(),
 	])
-	gun.loop(1, () => {
+	gun.loop(rate, () => {
 		game.add([
 			k.rect(24, 8, { radius: 2 }),
 			k.outline(4, colors.black),
@@ -285,6 +288,7 @@ function initGuns() {
 			{ dmg: GUN_DMG },
 		])
 	})
+	// TODO: clean
 	if (levels.gun >= 2) {
 		const gun = guns.add([
 			k.pos(-60, 0),
@@ -292,7 +296,7 @@ function initGuns() {
 			k.anchor("center"),
 			k.timer(),
 		])
-		gun.loop(1, () => {
+		gun.loop(rate, () => {
 			game.add([
 				k.rect(24, 8, { radius: 2 }),
 				k.outline(4, colors.black),
@@ -466,6 +470,8 @@ function highlight(opts: {
 	}
 }
 
+let bossMark = BOSS_MARK
+
 function enemy(opts: {
 	dmg?: number,
 	exp?: number,
@@ -477,8 +483,10 @@ function enemy(opts: {
 			this.onDeath(() => {
 				this.destroy()
 				k.addKaboom(this.pos)
+				// TODO: add more score for boss
 				setScore((s) => s + 100)
-				if (score >= 3000) {
+				if (score >= bossMark) {
+					bossMark += BOSS_MARK_STEP
 					spawnGigagantrum()
 				}
 				exp += opts.exp ?? 1
