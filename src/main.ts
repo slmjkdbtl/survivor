@@ -34,28 +34,69 @@ const DINO_BULLET_SPEED = 400
 const BTFLY_SPEED = 300
 const DINO_SPEED = 80
 const BAG_SPEED = 60
-const SWORD_DMG = 100
+const SWORD_DMG = 150
 const GUN_DMG = 100
 const DIZZY_SPEED = 1000
 const MAX_EXP_INIT = 10
 const MAX_EXP_STEP = 5
 
+k.volume(0.5)
 k.setBackground(0, 0, 0)
-k.loadSprite("bean", "sprites/bean.png")
-k.loadSprite("bag", "sprites/bag.png")
-k.loadSprite("dino", "sprites/dino.png")
-k.loadSprite("btfly", "sprites/btfly.png")
-k.loadSprite("hpbar", "sprites/hpbar.png")
-k.loadSprite("expbar", "sprites/expbar.png")
-k.loadSprite("toolbar", "sprites/toolbar.png")
-k.loadSprite("sword", "sprites/sword.png")
-k.loadSprite("gun", "sprites/gun.png")
-k.loadSprite("heart", "sprites/heart.png")
-k.loadSprite("trumpet", "sprites/trumpet.png")
-k.loadAseprite("field", "sprites/field.png", "sprites/field.json")
+
+const sprites = [
+	"bean",
+	"bag",
+	"dino",
+	"btfly",
+	"gigagantrum",
+	"hpbar",
+	"expbar",
+	"toolbar",
+	"sword",
+	"gun",
+	"heart",
+	"trumpet",
+]
+
+const aseprites = [
+	"field",
+]
+
+for (const spr of sprites) {
+	k.loadSprite(spr, `sprites/${spr}.png`)
+}
+
+for (const spr of aseprites) {
+	k.loadAseprite(spr, `sprites/${spr}.png`, `sprites/${spr}.json`)
+}
+
 k.loadBitmapFont("happy", "sprites/happy_28x36.png", 28, 36, {
 	// TODO: not working
 	outline: 4,
+})
+
+const sounds = [
+	"katamari",
+	"sword",
+	"wooosh",
+	"shoot",
+	"spring",
+	"off",
+	"alarm",
+	"powerup",
+]
+
+for (const snd of sounds) {
+	k.loadSound(snd, `sounds/${snd}.mp3`)
+}
+
+k.loop(1, () => {
+	const objs = game.get("*", { recursive: true })
+	console.log(objs.length)
+})
+
+const music = k.play("katamari", {
+	loop: true,
 })
 
 const colors = {
@@ -65,6 +106,7 @@ const colors = {
 	black: k.rgb(31, 16, 42),
 	blue: k.rgb(109, 128, 250),
 	lightblue: k.rgb(141, 183, 255),
+	grey: k.rgb(166, 133, 159),
 }
 
 const game = k.add([
@@ -88,10 +130,12 @@ for (let i = 0; i < WIDTH / TILE_WIDTH; i++) {
 
 k.onKeyPress("escape", () => {
 	if (game.paused) {
+		music.paused = false
 		game.paused = false
 		menu.paused = true
 		menu.hidden = true
 	} else {
+		music.paused = true
 		game.paused = true
 		menu.paused = false
 		menu.hidden = false
@@ -110,7 +154,7 @@ const bean = game.add([
 
 bean.onHurt((dmg) => {
 	const i = 10
-	k.shake(5)
+	k.shake(10)
 })
 
 bean.onHeal((dmg) => {
@@ -133,8 +177,8 @@ swords.onUpdate(() => {
 
 const levels = {
 	sword: 1,
-	gun: 1,
-	trumpet: 1,
+	gun: 0,
+	trumpet: 0,
 }
 
 const toolbar = ui.add([
@@ -191,9 +235,13 @@ function initSwords() {
 			k.sprite("sword"),
 			k.anchor("center"),
 			k.area({ shape: new k.Rect(k.vec2(0, -10), 5, 40) }),
+			{ dmg: SWORD_DMG },
 		])
 		sword.onCollide("enemy", (e) => {
-			e.hurt(SWORD_DMG)
+			k.play("sword", {
+				detune: k.rand(-300, 300),
+			})
+			e.hurt(sword.dmg)
 		})
 	}
 	if (levels.sword >= 4) {
@@ -217,8 +265,11 @@ function initGuns() {
 			k.outline(4, colors.black),
 			k.pos(gun.worldPos().add(16, -8)),
 			k.move(k.RIGHT, BULLET_SPEED),
+			k.color(colors.grey),
+			k.lifespan(10),
 			k.area(),
 			"bullet",
+			{ dmg: GUN_DMG },
 		])
 	})
 	if (levels.gun >= 2) {
@@ -234,8 +285,11 @@ function initGuns() {
 				k.outline(4, colors.black),
 				k.pos(gun.worldPos().add(-16, -8)),
 				k.move(k.LEFT, BULLET_SPEED),
+				k.color(colors.grey),
+				k.lifespan(10),
 				k.area(),
 				"bullet",
+				{ dmg: GUN_DMG },
 			])
 		})
 	}
@@ -283,7 +337,10 @@ function initTrumpet() {
 }
 
 k.onCollide("bullet", "enemy", (b, e) => {
-	e.hurt(GUN_DMG)
+	e.hurt(b.dmg)
+	if (e.is("boss")) {
+		b.destroy()
+	}
 })
 
 initSwords()
@@ -295,6 +352,17 @@ bean.onCollideUpdate("enemy", (e) => {
 	bean.hurt(k.dt() * e.dmg)
 })
 
+const hurtSnd = k.play("alarm", { loop: true, paused: true })
+
+bean.onCollide("enemy", (e) => {
+	hurtSnd.play()
+})
+
+bean.onCollideEnd("enemy", (e) => {
+	const cols = bean.getCollisions()
+	hurtSnd.paused = true
+})
+
 bean.onCollide("enemybullet", (e) => {
 	bean.hurt(e.dmg)
 	e.destroy()
@@ -304,6 +372,7 @@ bean.onDeath(() => {
 	game.paused = true
 	lose.paused = false
 	lose.hidden = false
+	hurtSnd.paused = true
 })
 
 const dirs = {
@@ -409,6 +478,7 @@ function enemy(opts: {
 	}
 }
 
+// TODO: dont spawn on bean or outside
 function getSpawnPos() {
 	return bean.pos.add(k.rand(-400, 400), k.rand(-400, 400))
 }
@@ -423,15 +493,17 @@ function spawnBag() {
 		k.area({ scale: 0.8 }),
 		k.health(100),
 		k.state("move"),
+		k.timer(),
 		bounce(),
 		enemy({ dmg: 100 }),
+		"minion",
 	])
 	bag.onStateUpdate("move", async () => {
 		const dir = bean.pos.sub(bag.pos).unit()
 		bag.move(dir.scale(BAG_SPEED))
 	})
 	bag.onStateEnter("dizzy", async () => {
-		await game.wait(2)
+		await bag.wait(2)
 		if (bag.state !== "dizzy") return
 		bag.enterState("move")
 	})
@@ -469,15 +541,17 @@ function spawnBtfly() {
 		k.area({ scale: 0.8 }),
 		k.state("idle"),
 		k.health(100),
+		k.timer(),
 		bounce(),
 		enemy({ dmg: 100 }),
+		"minion",
 	])
 	btfly.onUpdate(() => {
 		btfly.pos.x += k.dt() * k.rand(-1, 1) * 100
 		btfly.pos.y += k.dt() * k.rand(-1, 1) * 100
 	})
 	btfly.onStateEnter("idle", async () => {
-		await game.wait(2)
+		await btfly.wait(2)
 		if (btfly.state !== "idle") return
 		btfly.enterState("attack")
 	})
@@ -486,11 +560,15 @@ function spawnBtfly() {
 		const dest = bean.pos.add(dir.scale(100))
 		const dis = bean.pos.dist(btfly.pos)
 		const t = dis / BTFLY_SPEED
-		await game.tween(btfly.pos, dest, t, (p) => btfly.pos = p, k.easings.easeOutQuad)
+		k.play("wooosh", {
+			detune: k.rand(-300, 300),
+			volume: Math.min(1, 320 / dis),
+		})
+		await btfly.tween(btfly.pos, dest, t, (p) => btfly.pos = p, k.easings.easeOutQuad)
 		btfly.enterState("idle")
 	})
 	btfly.onStateEnter("dizzy", async () => {
-		await game.wait(2)
+		await btfly.wait(2)
 		if (btfly.state !== "dizzy") return
 		btfly.enterState("idle")
 	})
@@ -512,15 +590,17 @@ function spawnDino() {
 		k.rotate(0),
 		k.area({ scale: 0.8 }),
 		k.state("idle"),
+		k.timer(),
 		k.health(100),
 		bounce(),
 		enemy({ dmg: 100 }),
+		"minion",
 	])
 	dino.onUpdate(() => {
 		dino.flipX = bean.pos.x < dino.pos.x
 	})
 	dino.onStateEnter("idle", async () => {
-		await game.wait(1)
+		await dino.wait(1)
 		if (dino.state !== "idle") return
 		dino.enterState("attack")
 	})
@@ -530,25 +610,30 @@ function spawnDino() {
 			k.outline(4, colors.black),
 			k.pos(dino.worldPos().add(dino.flipX ? -24 : 24, 4)),
 			k.move(dino.flipX ? k.LEFT : k.RIGHT, DINO_BULLET_SPEED),
+			k.color(colors.grey),
 			k.area(),
+			k.lifespan(10),
 			"enemybullet",
 			{ dmg: 20 },
 		])
-		await game.wait(1)
+		const dis = bean.pos.dist(dino.pos)
+		k.play("shoot", {
+			detune: k.rand(-300, 300),
+			volume: Math.min(1, 320 / dis),
+		})
+		await dino.wait(1)
 		if (dino.state !== "attack") return
 		dino.enterState("move")
-	})
-	dino.onStateEnter("move", async () => {
-		await game.wait(2)
-		if (dino.state !== "move") return
-		dino.enterState("idle")
 	})
 	dino.onStateUpdate("move", async () => {
 		const dir = bean.pos.sub(dino.pos).unit()
 		dino.move(dir.scale(DINO_SPEED))
+		if (Math.abs(bean.pos.y - dino.pos.y) < 50 && bean.pos.dist(dino.pos) < 400) {
+			dino.enterState("idle")
+		}
 	})
 	dino.onStateEnter("dizzy", async () => {
-		await game.wait(2)
+		await dino.wait(2)
 		if (dino.state !== "dizzy") return
 		dino.enterState("idle")
 	})
@@ -561,15 +646,59 @@ function spawnDino() {
 	return dino
 }
 
+let isBossFighting = false
+
+function spawnGigagantrum() {
+	isBossFighting = true
+	game.removeAll("minion")
+	const maxHP = 1000
+	const boss = game.add([
+		k.pos(getSpawnPos()),
+		k.sprite("gigagantrum"),
+		k.anchor("center"),
+		k.scale(),
+		k.rotate(0),
+		k.area({ scale: 0.8 }),
+		k.state("idle"),
+		k.health(1000),
+		bounce(),
+		enemy({ dmg: 100 }),
+		"boss",
+	])
+	boss.add([
+		k.rect(60, 12, { radius: 6 }),
+		k.color(colors.black),
+		k.pos(-30, -120),
+	])
+	const hp = boss.add([
+		k.rect(60 - 8, 12 - 8, { radius: 4 }),
+		k.color(colors.green),
+		k.pos(-30 + 4, -120 + 4),
+	])
+	hp.onUpdate(() => {
+		hp.width = k.lerp(
+			hp.width,
+			52 * boss.hp() / maxHP,
+			k.dt() * 12,
+		)
+	})
+	return boss
+}
+
+// spawnGigagantrum()
+
+spawnBtfly()
 game.loop(1, () => {
+	if (isBossFighting) return
 	k.choose([
 		spawnBag,
-		spawnBtfly,
+		// spawnBtfly,
 		spawnDino,
 	])()
 })
 
 bean.onCollide("heart", (h) => {
+	k.play("powerup"),
 	bean.heal(10)
 	h.destroy()
 })
