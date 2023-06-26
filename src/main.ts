@@ -153,8 +153,9 @@ const bean = game.add([
 ])
 
 bean.onHurt((dmg) => {
-	const i = 10
-	k.shake(10)
+	dmgFilter.opacity += k.dt()
+	dmgFilter.opacity = Math.min(0.7, dmgFilter.opacity + k.dt() * 1.5)
+	k.shake(5)
 })
 
 bean.onHeal((dmg) => {
@@ -180,6 +181,18 @@ const levels = {
 	gun: 0,
 	trumpet: 0,
 }
+
+const dmgFilter = ui.add([
+	k.fixed(),
+	k.rect(k.width(), k.height()),
+	k.color(colors.red),
+	k.opacity(0),
+	k.z(200),
+])
+
+dmgFilter.onUpdate(() => {
+	dmgFilter.opacity = Math.max(0, dmgFilter.opacity - k.dt())
+})
 
 const toolbar = ui.add([
 	k.pos(k.vec2(24, k.height() - 24)),
