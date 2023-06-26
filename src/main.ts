@@ -56,6 +56,7 @@ const sprites = [
 	"gun",
 	"heart",
 	"trumpet",
+	"!",
 ]
 
 const aseprites = [
@@ -468,6 +469,7 @@ function highlight(opts: {
 
 function enemy(opts: {
 	dmg?: number,
+	exp?: number,
 } = {}) {
 	return {
 		id: "enemy",
@@ -477,9 +479,12 @@ function enemy(opts: {
 				this.destroy()
 				k.addKaboom(this.pos)
 				setScore((s) => s + 100)
-				exp += 1
+				if (score >= 3000) {
+					spawnGigagantrum()
+				}
+				exp += opts.exp ?? 1
 				if (exp >= maxExp) {
-					exp = 0
+					exp = exp - maxExp
 					presentUpgrades()
 					maxExp += MAX_EXP_STEP
 				}
@@ -659,25 +664,52 @@ function spawnDino() {
 	return dino
 }
 
+k.onKeyPress("space", spawnGigagantrum)
+
 let isBossFighting = false
 
-function spawnGigagantrum() {
+async function spawnGigagantrum() {
+	if (isBossFighting) return
 	isBossFighting = true
-	game.removeAll("minion")
-	const maxHP = 1000
+	const minions = game.get("minion")
+	for (const m of minions) {
+		m.paused = true
+		game.add([
+			k.sprite("!"),
+			k.pos(m.pos.add(40, -40)),
+			k.scale(),
+			k.opacity(1),
+			k.lifespan(2, { fade: 0.5 }),
+			bounce(),
+		])
+	}
+	await game.wait(2)
+	for (const m of minions) {
+		k.addKaboom(m.pos)
+		m.destroy()
+	}
+	const maxHP = 2000
+	await game.wait(1)
 	const boss = game.add([
 		k.pos(getSpawnPos()),
 		k.sprite("gigagantrum"),
 		k.anchor("center"),
 		k.scale(),
 		k.rotate(0),
-		k.area({ scale: 0.8 }),
+		k.area({ shape: new k.Rect(k.vec2(0), 80, 160) }),
 		k.state("idle"),
-		k.health(1000),
+		k.health(maxHP),
 		bounce(),
-		enemy({ dmg: 100 }),
+		enemy({ dmg: 100, exp: 20 }),
 		"boss",
 	])
+	boss.onDeath(() => {
+		isBossFighting = false
+	})
+	boss.onStateEnter("idle", () => {
+		// TODO:
+	})
+	// TODO: clean
 	boss.add([
 		k.rect(60, 12, { radius: 6 }),
 		k.color(colors.black),
@@ -698,14 +730,11 @@ function spawnGigagantrum() {
 	return boss
 }
 
-// spawnGigagantrum()
-
-spawnBtfly()
 game.loop(1, () => {
 	if (isBossFighting) return
 	k.choose([
 		spawnBag,
-		// spawnBtfly,
+		spawnBtfly,
 		spawnDino,
 	])()
 })
