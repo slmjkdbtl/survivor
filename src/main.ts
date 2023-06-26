@@ -33,6 +33,7 @@ const BULLET_SPEED = 800
 const DINO_BULLET_SPEED = 400
 const BTFLY_SPEED = 300
 const DINO_SPEED = 80
+const GIGAGANTRUM_SPEED = 200
 const BAG_SPEED = 60
 const SWORD_DMG = 150
 const GUN_DMG = 100
@@ -85,19 +86,17 @@ const sounds = [
 	"off",
 	"alarm",
 	"powerup",
+	"mystic",
+	"error",
 ]
 
 for (const snd of sounds) {
 	k.loadSound(snd, `sounds/${snd}.mp3`)
 }
 
-k.loop(1, () => {
-	const objs = game.get("*", { recursive: true })
-	console.log(objs.length)
-})
-
 const music = k.play("katamari", {
 	loop: true,
+	paused: true,
 })
 
 const colors = {
@@ -690,6 +689,7 @@ async function spawnGigagantrum() {
 	}
 	const maxHP = 2000
 	await game.wait(1)
+	k.play("mystic")
 	const boss = game.add([
 		k.pos(getSpawnPos()),
 		k.sprite("gigagantrum"),
@@ -698,6 +698,7 @@ async function spawnGigagantrum() {
 		k.rotate(0),
 		k.area({ shape: new k.Rect(k.vec2(0), 80, 160) }),
 		k.state("idle"),
+		k.timer(),
 		k.health(maxHP),
 		bounce(),
 		enemy({ dmg: 100, exp: 20 }),
@@ -706,8 +707,67 @@ async function spawnGigagantrum() {
 	boss.onDeath(() => {
 		isBossFighting = false
 	})
-	boss.onStateEnter("idle", () => {
-		// TODO:
+	boss.onStateEnter("idle", async () => {
+		await boss.wait(1)
+		boss.enterState(`charge${k.choose([1, 2])}`)
+	})
+	boss.onStateEnter("charge1", async () => {
+		await boss.wait(1)
+		boss.enterState("attack1")
+	})
+	boss.onStateUpdate("charge1", () => {
+		boss.pos = boss.pos.add(k.rand(-5, 5), k.rand(-5, 5))
+	})
+	boss.onStateEnter("attack1", async () => {
+		const num = 20
+		for (let i = 0; i < num; i++) {
+			const b = game.add([
+				k.pos(boss.pos),
+				k.circle(12),
+				k.outline(4, colors.black),
+				k.area(),
+				k.move(k.Vec2.fromAngle(360 / num * i), BULLET_SPEED),
+				k.lifespan(10),
+				k.color(),
+				"enemybullet",
+				{ dmg: 20 },
+			])
+			// b.onUpdate(() => {
+				// b.color = k.choose(Object.values(colors))
+			// })
+		}
+		k.play("error")
+		await boss.wait(1)
+		boss.enterState("move")
+	})
+	boss.onStateEnter("charge2", async () => {
+		await boss.wait(1)
+		boss.enterState("attack2")
+	})
+	boss.onStateDraw("charge2", () => {
+		k.drawLine({
+			p1: bean.pos,
+			p2: bean.pos.add(100, 1),
+			width: 4,
+			color: colors.black,
+		})
+	})
+	boss.onStateEnter("attack2", async () => {
+		const dir = bean.pos.sub(boss.pos).unit()
+		const dest = bean.pos.add(dir.scale(100))
+		const dis = bean.pos.dist(boss.pos)
+		const t = dis / (GIGAGANTRUM_SPEED * 3)
+		k.play("error")
+		await boss.tween(boss.pos, dest, t, (p) => boss.pos = p, k.easings.easeOutQuad)
+		boss.enterState("idle")
+	})
+	boss.onStateEnter("move", async () => {
+		await boss.wait(1)
+		boss.enterState("idle")
+	})
+	boss.onStateUpdate("move", async () => {
+		const dir = bean.pos.sub(boss.pos).unit()
+		boss.move(dir.scale(GIGAGANTRUM_SPEED))
 	})
 	// TODO: clean
 	boss.add([
@@ -936,6 +996,7 @@ function presentUpgrades() {
 			action()
 			game.paused = false
 			scene.destroy()
+			k.burp()
 		})
 	}
 	addItem(k.width() / 2, "sword", () => {
