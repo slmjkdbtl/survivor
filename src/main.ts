@@ -6,22 +6,20 @@ import kaboom, {
 	ScaleComp,
 	HealthComp,
 	TimerComp,
+	ColorComp,
 } from "kaboom"
-
-// TODO tip: watch out for game object count
 
 const k = kaboom({
 	width: 800,
 	height: 600,
 	canvas: document.querySelector("#game"),
 	font: "happy",
-	// TODO: bug
-	// scale: 0.8,
 })
 
+// Keep constants in one place so we can tweak them easily
 const SPEED = 320
-const WIDTH = 1600
-const HEIGHT = 1600
+const WIDTH = 1920
+const HEIGHT = 1920
 const TILE_WIDTH = 64
 const TILE_HEIGHT = 64
 const MAX_HP = 100
@@ -91,6 +89,7 @@ const sounds = [
 	"powerup",
 	"mystic",
 	"error",
+	"horn",
 ]
 
 for (const snd of sounds) {
@@ -112,16 +111,25 @@ const colors = {
 	grey: k.rgb(166, 133, 159),
 }
 
+// All objects in the main game scene will all be children of this "game" game
+// object, so can more easily manage them. For example, we just need to toggle
+// game.paused to pause everything, useful for menues and stuff.
 const game = k.add([
+	// We also add a timer component to this master game object and we use
+	// game.wait(), game.tween() etc for in game timer events instead of k.wait()
+	// so these timers can be paused when game.paused is true
 	k.timer(),
 ])
 
+// Also initialize the parent game object of all UI objects
 const ui = game.add([
+	// All UI objects don't respond to camera, so we use a fixed() component
 	k.fixed(),
+	// They should be always drawn above the game, so we explicitly give it a z()
 	k.z(100),
 ])
 
-// TODO: this is slow, good use case for canvas / framebuffer
+// Add the background tiles
 for (let i = 0; i < WIDTH / TILE_WIDTH; i++) {
 	for (let j = 0; j < HEIGHT / TILE_HEIGHT; j++) {
 		game.add([
@@ -131,6 +139,8 @@ for (let i = 0; i < WIDTH / TILE_WIDTH; i++) {
 	}
 }
 
+// Pause game when user press escape, we just toggle the paused / hidden props
+// the "game" parent game object and "menu" parent game object
 k.onKeyPress("escape", () => {
 	if (game.paused) {
 		music.paused = false
@@ -145,6 +155,7 @@ k.onKeyPress("escape", () => {
 	}
 })
 
+// Add our main character
 const bean = game.add([
 	k.pos(WIDTH / 2, HEIGHT / 2),
 	k.sprite("bean"),
@@ -155,36 +166,7 @@ const bean = game.add([
 	highlight(),
 ])
 
-bean.onHurt((dmg) => {
-	dmgFilter.opacity += k.dt()
-	dmgFilter.opacity = Math.min(0.7, dmgFilter.opacity + k.dt() * 1.5)
-	k.shake(5)
-})
-
-bean.onHeal((dmg) => {
-	if (bean.hp() > MAX_HP) bean.setHP(MAX_HP)
-	hpbar.highlight()
-	bean.highlight()
-})
-
-const swords = bean.add([
-	k.rotate(0),
-	{ speed: SWORD_SPEED },
-])
-
-const guns = bean.add([])
-const trumpets = bean.add([])
-
-swords.onUpdate(() => {
-	swords.angle += k.dt() * swords.speed
-})
-
-const levels = {
-	sword: 1,
-	gun: 0,
-	trumpet: 0,
-}
-
+// Add a screen filter to UI that turns red when player gets hit
 const dmgFilter = ui.add([
 	k.fixed(),
 	k.rect(k.width(), k.height()),
@@ -193,56 +175,62 @@ const dmgFilter = ui.add([
 	k.z(200),
 ])
 
+// Add some feedbacks when bean is hurt - show a short red screen filter effect
+// and screen shake
+bean.onHurt((dmg) => {
+	// Cap the damage filter opacity to 0.7
+	dmgFilter.opacity = Math.min(0.7, dmgFilter.opacity + k.dt() * 2.5)
+	k.shake(5)
+})
+
+// Always recover to 0
 dmgFilter.onUpdate(() => {
 	dmgFilter.opacity = Math.max(0, dmgFilter.opacity - k.dt())
 })
 
-const toolbar = ui.add([
-	k.pos(k.vec2(24, k.height() - 24)),
-	k.scale(),
-	k.sprite("toolbar"),
-	k.fixed(),
-	k.anchor("botleft"),
-	highlight({ scale: 1.1 }),
+// Add feedbacks when we heal
+bean.onHeal((dmg) => {
+	if (bean.hp() > MAX_HP) bean.setHP(MAX_HP)
+	// highlight() is from the custom component highlight(), which makes the game
+	// objects scale big a bit and then recover to normal
+	hpbar.highlight()
+	bean.highlight()
+})
+
+// A parent game object to manage all swords
+const swords = bean.add([
+	k.rotate(0),
+	{ speed: SWORD_SPEED },
 ])
 
-function updateToolbar() {
-	toolbar.removeAll()
-	let x = 36
-	for (const tool in levels) {
-		const level = levels[tool]
-		if (level <= 0) continue
-		toolbar.add([
-			k.sprite(tool),
-			k.pos(x, -38),
-			k.fixed(),
-			k.anchor("center"),
-			k.scale(0.8),
-		])
-		const dot = toolbar.add([
-			k.circle(12),
-			k.fixed(),
-			k.pos(x + 22, -24),
-			k.anchor("center"),
-			k.color(colors.black),
-		])
-		dot.add([
-			k.text(level + "", { size: 16 }),
-			k.fixed(),
-			k.anchor("center"),
-		])
-		x += 64
-	}
+// The swords will be constantly rotating, we only have to rotate the parent
+// game object!
+swords.onUpdate(() => {
+	swords.angle += k.dt() * swords.speed
+})
+
+// Parent game object for all guns
+const guns = bean.add([])
+// Parent game object for all trumpets
+const trumpets = bean.add([])
+
+// Current player level on all weapons, start with level 1 on sword
+const levels = {
+	sword: 1,
+	gun: 0,
+	trumpet: 0,
 }
 
-updateToolbar()
-
+// Add swords mechanics
 function initSwords() {
+	// To make it easy we'll remove all swords and add them again (it's cheap)
 	swords.removeAll()
 	if (levels.sword <= 0) return
 	const numSwords = Math.min(levels.sword, MAX_SWORDS)
 	const interval = 360 / numSwords
 	for (let i = 0; i < numSwords; i++) {
+		// Use another indirect parent game object to manage the swords position
+		// to the center
 		const center = swords.add([
 			k.rotate(i * interval),
 		])
@@ -255,11 +243,14 @@ function initSwords() {
 		])
 		sword.onCollide("enemy", (e) => {
 			k.play("sword", {
+				// Randomly detune the sound effect to add some variation when multiple
+				// happening sequetially
 				detune: k.rand(-300, 300),
 			})
 			e.hurt(sword.dmg)
 		})
 	}
+	// When level is more than 4, we increase the rotate speed
 	if (levels.sword >= 4) {
 		swords.speed = SWORD_SPEED * (levels.sword - 2)
 	}
@@ -332,6 +323,7 @@ function initTrumpet() {
 			}
 		}
 		trumpet.highlight()
+		k.play("horn")
 		const effect = bean.add([
 			k.circle(0),
 			k.timer(),
@@ -364,6 +356,49 @@ k.onCollide("bullet", "enemy", (b, e) => {
 initSwords()
 initGuns()
 initTrumpet()
+
+// The toolbar UI element to show the current levels on all weapons
+const toolbar = ui.add([
+	k.pos(k.vec2(24, k.height() - 24)),
+	k.scale(),
+	k.sprite("toolbar"),
+	k.fixed(),
+	k.anchor("botleft"),
+	highlight({ scale: 1.1 }),
+])
+
+// Update the toolbar to reflect current levels. To make it easy we'll just
+// remove everything and initialize items again.
+function updateToolbar() {
+	toolbar.removeAll()
+	let x = 36
+	for (const tool in levels) {
+		const level = levels[tool]
+		if (level <= 0) continue
+		toolbar.add([
+			k.sprite(tool),
+			k.pos(x, -38),
+			k.fixed(),
+			k.anchor("center"),
+			k.scale(0.8),
+		])
+		const dot = toolbar.add([
+			k.circle(12),
+			k.fixed(),
+			k.pos(x + 22, -24),
+			k.anchor("center"),
+			k.color(colors.black),
+		])
+		dot.add([
+			k.text(level + "", { size: 16 }),
+			k.fixed(),
+			k.anchor("center"),
+		])
+		x += 64
+	}
+}
+
+updateToolbar()
 
 // TODO: this still runs when game is paused
 bean.onCollideUpdate("enemy", (e) => {
@@ -479,13 +514,21 @@ function enemy(opts: {
 } = {}) {
 	return {
 		id: "enemy",
-		dmg: opts.dmg ?? 100,
-		add(this: GameObj<PosComp | HealthComp>) {
+		dmg: opts.dmg ?? 50,
+		update() {
+			this.color.r = k.lerp(this.color.r, 255, k.dt())
+			this.color.g = k.lerp(this.color.g, 255, k.dt())
+			this.color.b = k.lerp(this.color.b, 255, k.dt())
+		},
+		add(this: GameObj<PosComp | HealthComp | ColorComp>) {
+			this.onHurt(() => {
+				if (this.hp() <= 0) return
+				this.color = k.rgb(150, 150, 255)
+			})
 			this.onDeath(() => {
 				this.destroy()
 				k.addKaboom(this.pos)
-				// TODO: add more score for boss
-				setScore((s) => s + 100)
+				setScore((s) => s + (this.is("boss") ? 2000 : 100))
 				if (score >= bossMark) {
 					bossMark += BOSS_MARK_STEP
 					spawnGigagantrum()
@@ -520,8 +563,9 @@ function spawnBag() {
 		k.health(100),
 		k.state("move"),
 		k.timer(),
+		k.color(),
 		bounce(),
-		enemy({ dmg: 100 }),
+		enemy({ dmg: 50 }),
 		"minion",
 	])
 	bag.onStateUpdate("move", async () => {
@@ -568,8 +612,9 @@ function spawnBtfly() {
 		k.state("idle"),
 		k.health(100),
 		k.timer(),
+		k.color(),
 		bounce(),
-		enemy({ dmg: 100 }),
+		enemy({ dmg: 50 }),
 		"minion",
 	])
 	btfly.onUpdate(() => {
@@ -618,8 +663,9 @@ function spawnDino() {
 		k.state("idle"),
 		k.timer(),
 		k.health(100),
+		k.color(),
 		bounce(),
-		enemy({ dmg: 100 }),
+		enemy({ dmg: 50 }),
 		"minion",
 	])
 	dino.onUpdate(() => {
@@ -672,8 +718,6 @@ function spawnDino() {
 	return dino
 }
 
-k.onKeyPress("space", spawnGigagantrum)
-
 let isBossFighting = false
 
 async function spawnGigagantrum() {
@@ -711,8 +755,9 @@ async function spawnGigagantrum() {
 		k.state("idle"),
 		k.timer(),
 		k.health(maxHP),
+		k.color(),
 		bounce(),
-		enemy({ dmg: 100, exp: 20 }),
+		enemy({ dmg: 80, exp: 20 }),
 		"boss",
 	])
 	boss.onDeath(() => {
@@ -803,7 +848,7 @@ async function spawnGigagantrum() {
 	return boss
 }
 
-game.loop(1, () => {
+game.loop(0.5, () => {
 	if (isBossFighting) return
 	k.choose([
 		spawnBag,
@@ -923,8 +968,9 @@ k.onKeyPress("space", () => {
 	lose.hidden = true
 	lose.paused = true
 	game.paused = false
-	for (const e of game.get("enemy", { recursive: true })) {
-		e.hurt(100)
+	for (const e of game.get("enemy")) {
+		k.addKaboom(e.pos)
+		e.destroy()
 	}
 	game.removeAll("heart")
 	reset()
