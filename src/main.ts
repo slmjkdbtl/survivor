@@ -80,7 +80,8 @@ k.loadBitmapFont("happy", "sprites/happy_28x36.png", 28, 36, {
 })
 
 const sounds = [
-	"katamari",
+	"music",
+	"music2",
 	"sword",
 	"wooosh",
 	"shoot",
@@ -96,7 +97,7 @@ for (const snd of sounds) {
 	k.loadSound(snd, `sounds/${snd}.mp3`)
 }
 
-const music = k.play("katamari", {
+let music = k.play("music", {
 	loop: true,
 	// paused: true,
 })
@@ -698,6 +699,8 @@ async function spawnGigagantrum() {
 	const maxHP = 2000
 	await game.wait(1)
 	k.play("mystic")
+	music.paused = true
+	music = k.play("music2", { loop: true })
 	const boss = game.add([
 		k.pos(getSpawnPos()),
 		k.sprite("gigagantrum"),
@@ -714,6 +717,8 @@ async function spawnGigagantrum() {
 	])
 	boss.onDeath(() => {
 		isBossFighting = false
+		music.paused = true
+		music = k.play("music", { loop: true })
 	})
 	boss.onStateEnter("idle", async () => {
 		await boss.wait(1)
@@ -744,7 +749,7 @@ async function spawnGigagantrum() {
 				// b.color = k.choose(Object.values(colors))
 			// })
 		}
-		k.play("error")
+		k.play("error", { volume: 0.3 })
 		await boss.wait(1)
 		boss.enterState("move")
 	})
@@ -908,6 +913,9 @@ function reset() {
 	setScore(0)
 	exp = 0
 	maxExp = MAX_EXP_INIT
+	bossMark = BOSS_MARK
+	music.paused = true
+	music = k.play("music", { loop: true })
 }
 
 k.onKeyPress("space", () => {
