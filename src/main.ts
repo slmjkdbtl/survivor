@@ -40,8 +40,18 @@ const BOSS_MARK = 3000
 const BOSS_MARK_STEP = 3000
 const TOUCH_SPEED = 40
 
+const colors = {
+	red: k.rgb(204, 66, 94),
+	green: k.rgb(91, 166, 117),
+	orange: k.rgb(255, 184, 121),
+	black: k.rgb(31, 16, 42),
+	blue: k.rgb(109, 128, 250),
+	lightblue: k.rgb(141, 183, 255),
+	grey: k.rgb(166, 133, 159),
+}
+
 k.volume(0.5)
-k.setBackground(0, 0, 0)
+k.setBackground(k.black)
 
 const sprites = [
 	"bean",
@@ -100,16 +110,6 @@ let music = k.play("music", {
 	// paused: true,
 })
 
-const colors = {
-	red: k.rgb(204, 66, 94),
-	green: k.rgb(91, 166, 117),
-	orange: k.rgb(255, 184, 121),
-	black: k.rgb(31, 16, 42),
-	blue: k.rgb(109, 128, 250),
-	lightblue: k.rgb(141, 183, 255),
-	grey: k.rgb(166, 133, 159),
-}
-
 // All objects in the main game scene will all be children of this "game" game
 // object, so can more easily manage them. For example, we just need to toggle
 // game.paused to pause everything, useful for menues and stuff.
@@ -141,12 +141,12 @@ for (let i = 0; i < WIDTH / TILE_WIDTH; i++) {
 // Pause game when user press escape, we just toggle the paused / hidden props
 // the "game" parent game object and "menu" parent game object
 k.onKeyPress("escape", () => {
-	if (game.paused) {
+	if (game.paused && !menu.hidden) {
 		music.paused = false
 		game.paused = false
 		menu.paused = true
 		menu.hidden = true
-	} else {
+	} else if (!game.paused && menu.hidden) {
 		music.paused = true
 		game.paused = true
 		menu.paused = false
@@ -804,12 +804,19 @@ async function spawnGigagantrum() {
 		boss.enterState("attack2")
 	})
 	boss.onStateDraw("charge2", () => {
-		k.drawLine({
-			p1: bean.pos,
-			p2: bean.pos.add(100, 1),
+		const diff = bean.pos.sub(boss.pos).unit()
+		const p1 = diff.scale(80)
+		const p2 = diff.scale(240)
+		const p3 = p2.add(k.Vec2.fromAngle(boss.pos.angle(bean.pos) + 45).scale(40))
+		const p4 = p2.add(k.Vec2.fromAngle(boss.pos.angle(bean.pos) - 45).scale(40))
+		const opts = {
 			width: 4,
+			opacity: k.wave(0, 1, k.time() * 12),
 			color: colors.black,
-		})
+		}
+		k.drawLine({ p1: p1, p2: p2, ...opts })
+		k.drawLine({ p1: p2, p2: p3, ...opts })
+		k.drawLine({ p1: p2, p2: p4, ...opts })
 	})
 	boss.onStateEnter("attack2", async () => {
 		const dir = bean.pos.sub(boss.pos).unit()
