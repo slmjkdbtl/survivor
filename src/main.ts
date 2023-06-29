@@ -23,7 +23,7 @@ const TILE_HEIGHT = 64
 const MAX_HP = 100
 const HPBAR_WIDTH = 200
 const EXPBAR_WIDTH = 200
-const SWORD_SPEED = 80
+const SWORD_SPEED = 60
 const MAX_SWORDS = 3
 const BULLET_SPEED = 800
 const DINO_BULLET_SPEED = 400
@@ -401,6 +401,7 @@ updateToolbar()
 
 // TODO: this still runs when game is paused
 bean.onCollideUpdate("enemy", (e) => {
+	if (game.paused) return
 	bean.hurt(k.dt() * e.dmg)
 })
 
@@ -529,7 +530,7 @@ function enemy(opts: {
 				k.addKaboom(this.pos)
 				setScore((s) => s + (this.is("boss") ? 2000 : 100))
 				if (score >= bossMark) {
-					bossMark += BOSS_MARK_STEP
+					bossMark += BOSS_MARK_STEP + 2000
 					spawnGigagantrum()
 				}
 				exp += opts.exp ?? 1
@@ -782,7 +783,8 @@ async function spawnGigagantrum() {
 				k.pos(boss.pos),
 				k.circle(12),
 				k.outline(4, colors.black),
-				k.area(),
+				k.anchor("center"),
+				k.area({ scale: 0.5 }),
 				k.move(k.Vec2.fromAngle(360 / num * i), BULLET_SPEED),
 				k.lifespan(10),
 				k.color(),
@@ -947,7 +949,12 @@ lose.hidden = true
 lose.paused = true
 
 function reset() {
-	bean.setHP(MAX_HP)
+	for (const e of game.get("enemy")) {
+		k.addKaboom(e.pos)
+		e.destroy()
+	}
+	game.removeAll("heart")
+	bean.setHP(bean.maxHP())
 	levels.sword = 1
 	levels.gun = 0
 	levels.trumpet = 0
@@ -956,6 +963,7 @@ function reset() {
 	initGuns()
 	setScore(0)
 	exp = 0
+	isBossFighting = false
 	maxExp = MAX_EXP_INIT
 	bossMark = BOSS_MARK
 	music.paused = true
@@ -967,11 +975,14 @@ k.onKeyPress("space", () => {
 	lose.hidden = true
 	lose.paused = true
 	game.paused = false
-	for (const e of game.get("enemy")) {
-		k.addKaboom(e.pos)
-		e.destroy()
-	}
-	game.removeAll("heart")
+	reset()
+})
+
+k.onMousePress(() => {
+	if (lose.hidden) return
+	lose.hidden = true
+	lose.paused = true
+	game.paused = false
 	reset()
 })
 
