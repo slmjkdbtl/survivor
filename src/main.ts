@@ -10,8 +10,6 @@ import kaboom, {
 } from "kaboom"
 
 const k = kaboom({
-	width: 800,
-	height: 600,
 	canvas: document.querySelector("#game"),
 	font: "happy",
 })
@@ -40,6 +38,7 @@ const MAX_EXP_INIT = 10
 const MAX_EXP_STEP = 5
 const BOSS_MARK = 3000
 const BOSS_MARK_STEP = 3000
+const TOUCH_SPEED = 40
 
 k.volume(0.5)
 k.setBackground(0, 0, 0)
@@ -353,10 +352,6 @@ k.onCollide("bullet", "enemy", (b, e) => {
 	}
 })
 
-initSwords()
-initGuns()
-initTrumpet()
-
 // The toolbar UI element to show the current levels on all weapons
 const toolbar = ui.add([
 	k.pos(k.vec2(24, k.height() - 24)),
@@ -366,6 +361,10 @@ const toolbar = ui.add([
 	k.anchor("botleft"),
 	highlight({ scale: 1.1 }),
 ])
+
+initSwords()
+initGuns()
+initTrumpet()
 
 // Update the toolbar to reflect current levels. To make it easy we'll just
 // remove everything and initialize items again.
@@ -1074,3 +1073,21 @@ function presentUpgrades() {
 		initTrumpet()
 	})
 }
+
+let lastTouchPos = null
+
+k.onTouchStart(() => {
+	if (game.paused) return
+	lastTouchPos = k.mousePos()
+})
+
+k.onTouchMove(() => {
+	if (game.paused) return
+	const movement = k.mousePos().sub(lastTouchPos)
+	bean.move(movement.scale(TOUCH_SPEED))
+	lastTouchPos = k.mousePos()
+})
+
+k.onTouchEnd(() => {
+	lastTouchPos = null
+})

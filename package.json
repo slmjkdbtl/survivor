@@ -9,7 +9,7 @@
 		"build:desktop": "tauri build"
 	},
 	"dependencies": {
-		"kaboom": "^3000.0.12"
+		"kaboom": "^3000.0.14"
 	},
 	"devDependencies": {
 		"@tauri-apps/cli": "^1.4.0",
