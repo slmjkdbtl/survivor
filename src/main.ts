@@ -131,6 +131,8 @@ function makeFilter() {
 }
 
 function initTitle() {
+	music.paused = true
+	music = k.play("music", { loop: true })
 	const scene = k.add([])
 	scene.add(makeFilter())
 	const title = scene.add([
@@ -152,7 +154,7 @@ function initTitle() {
 	])
 	const box = scene.add([
 		k.rect(text.width + 24, text.height + 24, { radius: 8 }),
-		k.pos(k.center().add(0, 180)),
+		k.pos(k.center().add(0, 170)),
 		k.anchor("center"),
 		k.color(colors.black),
 		k.fixed(),
