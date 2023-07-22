@@ -133,10 +133,11 @@ function makeFilter() {
 function initTitle() {
 	music.paused = true
 	music = k.play("music", { loop: true })
-	const scene = k.add([])
+	const scene = k.add([
+		k.fixed(),
+	])
 	scene.add(makeFilter())
 	const title = scene.add([
-		k.fixed(),
 		k.z(200),
 		k.anchor("center"),
 		k.pos(k.center().add(0, -60)),
@@ -149,7 +150,6 @@ function initTitle() {
 	const text = k.make([
 		k.text("Press space or click to start", { size: 24 }),
 		k.anchor("center"),
-		k.fixed(),
 		k.opacity(),
 	])
 	const box = scene.add([
@@ -157,7 +157,6 @@ function initTitle() {
 		k.pos(k.center().add(0, 170)),
 		k.anchor("center"),
 		k.color(colors.black),
-		k.fixed(),
 		k.opacity(),
 	])
 	box.onUpdate(() => {
@@ -233,7 +232,6 @@ function initGame() {
 
 	// Add a screen filter to UI that turns red when player gets hit
 	const dmgFilter = ui.add([
-		k.fixed(),
 		k.rect(k.width(), k.height()),
 		k.color(colors.red),
 		k.opacity(0),
@@ -423,7 +421,6 @@ function initGame() {
 		k.pos(k.vec2(24, k.height() - 24)),
 		k.scale(),
 		k.sprite("toolbar"),
-		k.fixed(),
 		k.anchor("botleft"),
 		highlight({ scale: 1.1 }),
 	])
@@ -443,20 +440,17 @@ function initGame() {
 			toolbar.add([
 				k.sprite(tool),
 				k.pos(x, -38),
-				k.fixed(),
 				k.anchor("center"),
 				k.scale(0.8),
 			])
 			const dot = toolbar.add([
 				k.circle(12),
-				k.fixed(),
 				k.pos(x + 22, -24),
 				k.anchor("center"),
 				k.color(colors.black),
 			])
 			dot.add([
 				k.text(level + "", { size: 16 }),
-				k.fixed(),
 				k.anchor("center"),
 			])
 			x += 64
@@ -868,21 +862,18 @@ function initGame() {
 			k.pos(pos),
 			k.scale(),
 			k.rect(width, 16, { radius: 8 }),
-			k.fixed(),
 			k.color(colors.black),
 			highlight({ scale: 1.1 }),
 		])
 
 		const bar = bg.add([
 			k.rect(0, 16, { radius: 8 }),
-			k.fixed(),
 			k.color(color),
 		])
 
 		bar.add([
 			k.pos(0, -22),
 			k.sprite(sprite),
-			k.fixed(),
 		])
 
 		bar.onUpdate(() => {
@@ -921,7 +912,6 @@ function initGame() {
 		}),
 		k.anchor("topright"),
 		k.pos(k.width() - 24, 24),
-		k.fixed(),
 		k.scale(),
 		highlight(),
 	])
@@ -976,7 +966,6 @@ function initGame() {
 		scene.add(makeFilter())
 		scene.add([
 			k.text("Choose an upgrade"),
-			k.fixed(),
 			k.anchor("center"),
 			k.pos(k.width() / 2, 160),
 		])
@@ -984,7 +973,6 @@ function initGame() {
 			const box = scene.add([
 				k.rect(80, 80, { radius: 4, }),
 				k.outline(4),
-				k.fixed(),
 				k.anchor("center"),
 				k.pos(x, 320),
 				k.scale(2),
@@ -993,7 +981,6 @@ function initGame() {
 			])
 			box.add([
 				k.sprite(thing),
-				k.fixed(),
 				k.anchor("center"),
 			])
 			box.onClick(() => {
@@ -1036,7 +1023,6 @@ function initGame() {
 	}))
 
 	const menu = ui.add([
-		k.fixed(),
 		k.z(100),
 	])
 
@@ -1046,14 +1032,12 @@ function initGame() {
 
 	menu.add([
 		k.rect(12, 48, { radius: 4 }),
-		k.fixed(),
 		k.pos(k.width() / 2 - 12, k.height() / 2),
 		k.anchor("center"),
 	])
 
 	menu.add([
 		k.rect(12, 48, { radius: 4 }),
-		k.fixed(),
 		k.pos(k.width() / 2 + 12, k.height() / 2),
 		k.anchor("center"),
 	])
