@@ -51,7 +51,7 @@ const colors = {
 }
 
 k.volume(0.5)
-k.setBackground(k.black)
+k.setBackground(colors.black)
 
 const sprites = [
 	"title",
@@ -166,18 +166,14 @@ function initTitle() {
 		text.opacity = k.wave(0, 1, k.time() * 6)
 	})
 	box.add(text)
-	const evs = []
-	scene.onDestroy(() => {
-		evs.forEach((ev) => ev.cancel())
+	scene.onKeyPress("space", () => {
+		scene.destroy()
+		initGame()
 	})
-	evs.push(k.onKeyPress("space", () => {
+	scene.onMousePress(() => {
 		scene.destroy()
 		initGame()
-	}))
-	evs.push(k.onClick(() => {
-		scene.destroy()
-		initGame()
-	}))
+	})
 	return scene
 }
 
@@ -495,18 +491,12 @@ function initGame() {
 		"down": k.DOWN,
 	}
 
-	k.onUpdate(() => {
+	game.onUpdate(() => {
 		k.camPos(bean.pos)
 	})
 
-	const evs = []
-
-	game.onDestroy(() => {
-		evs.forEach((ev) => ev.cancel())
-	})
-
 	for (const dir in dirs) {
-		evs.push(k.onKeyDown(dir as Key, () => {
+		game.onKeyDown(dir as Key, () => {
 			if (game.paused) return
 			bean.move(dirs[dir].scale(SPEED))
 			const xMin = bean.width / 2
@@ -517,7 +507,7 @@ function initGame() {
 			if (bean.pos.y < yMin) bean.pos.y = yMin
 			if (bean.pos.x > xMax) bean.pos.x = xMax
 			if (bean.pos.y > yMax) bean.pos.y = yMax
-		}))
+		})
 	}
 
 	// TODO: dont spawn on bean or outside
@@ -1006,21 +996,21 @@ function initGame() {
 
 	let lastTouchPos = null
 
-	evs.push(k.onTouchStart(() => {
+	game.onTouchStart(() => {
 		if (game.paused) return
 		lastTouchPos = k.mousePos()
-	}))
+	})
 
-	evs.push(k.onTouchMove(() => {
+	game.onTouchMove(() => {
 		if (game.paused) return
 		const movement = k.mousePos().sub(lastTouchPos)
 		bean.move(movement.scale(TOUCH_SPEED))
 		lastTouchPos = k.mousePos()
-	}))
+	})
 
-	evs.push(k.onTouchEnd(() => {
+	game.onTouchEnd(() => {
 		lastTouchPos = null
-	}))
+	})
 
 	const menu = ui.add([
 		k.z(100),
